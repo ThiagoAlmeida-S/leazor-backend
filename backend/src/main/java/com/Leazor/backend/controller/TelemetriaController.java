@@ -7,6 +7,8 @@ import com.Leazor.backend.service.LeituraSensorService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 @RestController
@@ -20,15 +22,34 @@ public class TelemetriaController {
         this.leituraService = leituraService;
     }
 
-    // === NOVO: Endpoint GET para o aplicativo React Native ===
+    // === ATUALIZADO: Endpoint GET buscando do banco de dados ===
     @GetMapping
     public Map<String, Object> obterTelemetriaFrontEnd() {
-        // Por enquanto retornamos valores fixos para testar a tela.
-        // Futuramente, podemos usar o 'leituraService' para buscar a última leitura no banco!
-        return Map.of(
-                "bateria", 88,
-                "distancia", 15.4
-        );
+        // Defina os IDs dos sensores conforme cadastrados no banco de dados
+        Long ID_BATERIA = 1L;
+        Long ID_ULTRASSONICO = 2L;
+
+        Double valorBateria = null;
+        Double valorDistancia = null;
+
+        // 1. Busca a leitura mais recente da bateria
+        List<LeituraSensor> leiturasBateria = leituraService.buscarHistoricoDoSensor(ID_BATERIA);
+        if (!leiturasBateria.isEmpty()) {
+            valorBateria = leiturasBateria.get(0).getValor(); // Pega a primeira da lista (mais recente)
+        }
+
+        // 2. Busca a leitura mais recente da distância
+        List<LeituraSensor> leiturasDistancia = leituraService.buscarHistoricoDoSensor(ID_ULTRASSONICO);
+        if (!leiturasDistancia.isEmpty()) {
+            valorDistancia = leiturasDistancia.get(0).getValor(); // Pega a primeira da lista (mais recente)
+        }
+
+        // 3. Monta a resposta para o React Native
+        Map<String, Object> resposta = new HashMap<>();
+        resposta.put("bateria", valorBateria);
+        resposta.put("distancia", valorDistancia);
+
+        return resposta;
     }
 
     // === SEU CÓDIGO ORIGINAL CONTINUA AQUI ===
