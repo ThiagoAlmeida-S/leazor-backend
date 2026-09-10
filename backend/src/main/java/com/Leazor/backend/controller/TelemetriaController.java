@@ -13,7 +13,7 @@ import java.util.Map;
 
 @RestController
 @RequestMapping("/api/telemetria")
-@CrossOrigin(origins = "*") // Permite que o React Native acesse a API
+@CrossOrigin(origins = "*")
 public class TelemetriaController {
 
     private final LeituraSensorService leituraService;
@@ -22,37 +22,30 @@ public class TelemetriaController {
         this.leituraService = leituraService;
     }
 
-    // === ATUALIZADO: Endpoint GET buscando do banco de dados ===
     @GetMapping
     public Map<String, Object> obterTelemetriaFrontEnd() {
-        // Defina os IDs dos sensores conforme cadastrados no banco de dados
         Long ID_BATERIA = 1L;
         Long ID_ULTRASSONICO = 2L;
+        Long ID_ORIENTACAO = 3L;
+        Long ID_TEMPERATURA = 4L;
+        Long ID_UMIDADE = 5L;
 
-        Double valorBateria = null;
-        Double valorDistancia = null;
-
-        // 1. Busca a leitura mais recente da bateria
-        List<LeituraSensor> leiturasBateria = leituraService.buscarHistoricoDoSensor(ID_BATERIA);
-        if (!leiturasBateria.isEmpty()) {
-            valorBateria = leiturasBateria.get(0).getValor(); // Pega a primeira da lista (mais recente)
-        }
-
-        // 2. Busca a leitura mais recente da distância
-        List<LeituraSensor> leiturasDistancia = leituraService.buscarHistoricoDoSensor(ID_ULTRASSONICO);
-        if (!leiturasDistancia.isEmpty()) {
-            valorDistancia = leiturasDistancia.get(0).getValor(); // Pega a primeira da lista (mais recente)
-        }
-
-        // 3. Monta a resposta para o React Native
         Map<String, Object> resposta = new HashMap<>();
-        resposta.put("bateria", valorBateria);
-        resposta.put("distancia", valorDistancia);
+
+        resposta.put("bateria", buscarUltimoValor(ID_BATERIA));
+        resposta.put("distancia", buscarUltimoValor(ID_ULTRASSONICO));
+        resposta.put("inclinacao", buscarUltimoValor(ID_ORIENTACAO));
+        resposta.put("temperatura", buscarUltimoValor(ID_TEMPERATURA));
+        resposta.put("umidade", buscarUltimoValor(ID_UMIDADE));
 
         return resposta;
     }
 
-    // === SEU CÓDIGO ORIGINAL CONTINUA AQUI ===
+    private Double buscarUltimoValor(Long sensorId) {
+        List<LeituraSensor> leituras = leituraService.buscarHistoricoDoSensor(sensorId);
+        return leituras.isEmpty() ? null : leituras.get(0).getValor();
+    }
+
     @PostMapping
     public ResponseEntity<String> receberTelemetria(@RequestBody TelemetriaDTO dto) {
         try {
