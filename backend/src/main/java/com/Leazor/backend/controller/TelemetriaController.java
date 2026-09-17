@@ -1,8 +1,11 @@
 package com.Leazor.backend.controller;
 
 import com.Leazor.backend.dto.TelemetriaDTO;
+import com.Leazor.backend.dto.TelemetriaIADTO;
+import com.Leazor.backend.model.Historico;
 import com.Leazor.backend.model.LeituraSensor;
 import com.Leazor.backend.model.Sensor;
+import com.Leazor.backend.repository.HistoricoRepository;
 import com.Leazor.backend.service.LeituraSensorService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -17,9 +20,13 @@ import java.util.Map;
 public class TelemetriaController {
 
     private final LeituraSensorService leituraService;
+    private final HistoricoRepository HistoricoRepository; // Injeção do repositório de histórico
+    private TelemetriaIADTO ultimoStatusIA = new TelemetriaIADTO();
 
-    public TelemetriaController(LeituraSensorService leituraService) {
+    // Construtor atualizado com as duas dependências
+    public TelemetriaController(LeituraSensorService leituraService, HistoricoRepository eventoRepository) {
         this.leituraService = leituraService;
+        this.HistoricoRepository = eventoRepository;
     }
 
     @GetMapping
@@ -28,7 +35,6 @@ public class TelemetriaController {
         Long ID_ULTRASSONICO = 2L;
         Long ID_ORIENTACAO = 3L;
         Long ID_TEMPERATURA = 4L;
-        Long ID_UMIDADE = 5L;
 
         Map<String, Object> resposta = new HashMap<>();
 
@@ -36,7 +42,7 @@ public class TelemetriaController {
         resposta.put("distancia", buscarUltimoValor(ID_ULTRASSONICO));
         resposta.put("inclinacao", buscarUltimoValor(ID_ORIENTACAO));
         resposta.put("temperatura", buscarUltimoValor(ID_TEMPERATURA));
-        resposta.put("umidade", buscarUltimoValor(ID_UMIDADE));
+        resposta.put("iaStatus", ultimoStatusIA);
 
         return resposta;
     }
@@ -62,5 +68,22 @@ public class TelemetriaController {
         } catch (Exception e) {
             return ResponseEntity.badRequest().body("Erro ao salvar leitura: " + e.getMessage());
         }
+    }
+
+    // ONDE O CÓDIGO DA IA E DO HISTÓRICO É EXECUTADO:
+    @PostMapping("/ia")
+    public ResponseEntity<String> receberTelemetriaIA(@RequestBody TelemetriaIADTO dto) {
+        this.ultimoStatusIA = dto;
+
+        // Regra de negócio: Salva evento no banco se um obstáculo for detectado
+        if (dto.getQtdObstaculos() != null && dto.getQtdObstaculos() > 0) {
+            Historico evento = new Historico(
+                    "OBSTACULO_DETECTADO",
+                    "Obstáculo identificado pela visão computacional (" + dto.getClasseDetectada() + ")"
+            );
+            HistoricoRepository.save(evento);
+        }
+
+        return ResponseEntity.ok("Status da IA e eventos salvos com sucesso!");
     }
 }
