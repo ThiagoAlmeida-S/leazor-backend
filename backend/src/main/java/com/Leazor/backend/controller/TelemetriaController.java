@@ -6,7 +6,9 @@ import com.Leazor.backend.model.Historico;
 import com.Leazor.backend.model.LeituraSensor;
 import com.Leazor.backend.model.Sensor;
 import com.Leazor.backend.repository.HistoricoRepository;
+import com.Leazor.backend.service.IntegracaoPythonService;
 import com.Leazor.backend.service.LeituraSensorService;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -21,9 +23,13 @@ public class TelemetriaController {
 
     private final LeituraSensorService leituraService;
     private final HistoricoRepository HistoricoRepository; // Injeção do repositório de histórico
+
+    @Autowired(required = false)
+    private IntegracaoPythonService integracaoPythonService;
+
     private TelemetriaIADTO ultimoStatusIA = new TelemetriaIADTO();
 
-    // Construtor atualizado com as duas dependências
+    // Construtor atualizado com as dependências base
     public TelemetriaController(LeituraSensorService leituraService, HistoricoRepository eventoRepository) {
         this.leituraService = leituraService;
         this.HistoricoRepository = eventoRepository;
@@ -43,6 +49,11 @@ public class TelemetriaController {
         resposta.put("inclinacao", buscarUltimoValor(ID_ORIENTACAO));
         resposta.put("temperatura", buscarUltimoValor(ID_TEMPERATURA));
         resposta.put("iaStatus", ultimoStatusIA);
+
+        // Tenta obter o status da IA diretamente do Python caso o serviço esteja disponível
+        if (integracaoPythonService != null) {
+            resposta.put("iaStatusTempoReal", integracaoPythonService.obterStatusIAEmTempoReal());
+        }
 
         return resposta;
     }
